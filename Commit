@@ -1,0 +1,54 @@
+# احفظ هذا السطر في سطر واحد ثم شغّله داخل مجلد الريبو
+bash -c 'cat > .github/workflows/ci-deploy.yml <<'"'"'YML
+name: Build Push Deploy
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_TAG: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ secrets.REGISTRY_HOST }}
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
+      - name: Build and push backend
+        run: |
+          IMAGE=${{ secrets.REGISTRY_HOST }}/${{ secrets.REGISTRY_USER }}/b2b-web3-backend:${{ env.IMAGE_TAG }}
+          docker build -t "$IMAGE" -f Dockerfile.backend .
+          docker push "$IMAGE"
+      - name: Build and push frontend
+        run: |
+          IMAGE=${{ secrets.REGISTRY_HOST }}/${{ secrets.REGISTRY_USER }}/b2b-web3-frontend:${{ env.IMAGE_TAG }}
+          docker build -t "$IMAGE" -f frontend-admin/Dockerfile.frontend frontend-admin
+          docker push "$IMAGE"
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore kubeconfig
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_BASE64 }}" | base64 --decode > kubeconfig
+          export KUBECONFIG=$PWD/kubeconfig
+      - name: Apply manifests
+        run: |
+          export KUBECONFIG=$PWD/kubeconfig
+          sed -i "s|__BACKEND_IMAGE__|${{ secrets.REGISTRY_HOST }}/${{ secrets.REGISTRY_USER }}/b2b-web3-backend:${{ github.sha }}|g" deploy/backend-deployment.yaml
+          sed -i "s|__FRONTEND_IMAGE__|${{ secrets.REGISTRY_HOST }}/${{ secrets.REGISTRY_USER }}/b2b-web3-frontend:${{ github.sha }}|g" deploy/frontend-deployment.yaml
+          kubectl apply -f deploy/
+YML
+git add .github/workflows/ci-deploy.yml
+git commit -m "Add CI/CD workflow"
+git push origin main'
+
