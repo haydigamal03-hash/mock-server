@@ -1,0 +1,28 @@
+{
+  "name": "tron-dashboard-mild-security",
+  "version": "1.0.0",
+  "description": "TRON Dashboard with MILD Security Framework - 7-Layer Defense",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "NODE_ENV=development node src/index.js",
+    "init": "node scripts/init.js"
+  },
+  "keywords": [
+    "tron",
+    "dashboard",
+    "security",
+    "mild",
+    "framework",
+    "encryption",
+    "session-management"
+  ],
+  "author": "haydigamal03-hash",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "express-session": "^1.17.3"
+  },
+  "devDependencies": {}
+}
